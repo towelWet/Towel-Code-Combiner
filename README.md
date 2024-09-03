@@ -1,4 +1,4 @@
-# Towel Code Combiner (Only Combines Python Code)
+# Towel Code Combiner
 
 ### 🖥️ Packaging on Mac with Custom Icon for `list_all_files.py`:
 
