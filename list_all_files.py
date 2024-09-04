@@ -1,13 +1,19 @@
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, messagebox, Button, Checkbutton, IntVar, Toplevel
-import os  # Import the os module
+from tkinter import filedialog, scrolledtext, messagebox, Button, Checkbutton, IntVar, Toplevel, Label, Entry
+import os
 
 def browse_directory():
     directory = filedialog.askdirectory()
     if directory:
-        combine_files(directory)
+        try:
+            depth = int(depth_entry.get())  # Get depth from entry field and convert to integer
+            if depth < 0:
+                raise ValueError("Depth cannot be negative")
+            combine_files(directory, depth)
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid non-negative integer for depth.")
 
-def combine_files(directory):
+def combine_files(directory, depth):
     combined_content = ""
     supported_extensions = []
 
@@ -25,11 +31,20 @@ def combine_files(directory):
         if var.get():
             supported_extensions.append(ext)
 
-    files = [file for file in os.listdir(directory) if any(file.endswith(ext) for ext in supported_extensions)]
-
-    for file_name in files:
-        with open(os.path.join(directory, file_name), 'r') as file:
-            combined_content += f"\n// File: {file_name}\n" + file.read() + "\n"
+    # Traverse directories up to the specified depth
+    for root, dirs, files in os.walk(directory):
+        # Calculate depth of the current directory
+        current_depth = root[len(directory):].count(os.sep)
+        if current_depth > depth:
+            del dirs[:]  # Stop traversing deeper into this directory
+            continue
+        
+        # Filter files by supported extensions
+        files = [file for file in files if any(file.endswith(ext) for ext in supported_extensions)]
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
+                combined_content += f"\n// File: {file_path}\n" + file.read() + "\n"
 
     text_area.delete('1.0', tk.END)  # Clear previous content
     text_area.insert(tk.END, combined_content)  # Display combined content
@@ -47,7 +62,7 @@ def raise_frame(frame):
 def show_bonus_options():
     bonus_window = Toplevel(root)
     bonus_window.title("Bonus File Types")
-    bonus_window.geometry("300x600")  # Set the size to 300x600
+    bonus_window.geometry("300x600")
 
     # Create frames for each page
     page1 = tk.Frame(bonus_window)
@@ -145,11 +160,11 @@ def show_bonus_options():
     raise_frame(page1)
 
 def main():
-    global text_area, py_var, cpp_var, h_var, html_var, js_var, php_var, css_var, bonus_vars, root
+    global text_area, py_var, cpp_var, h_var, html_var, js_var, php_var, css_var, bonus_vars, root, depth_entry
 
     root = tk.Tk()
     root.title("Towel Code Combiner")
-    root.geometry("600x600")
+    root.geometry("600x650")
 
     # Default file type checkboxes (auto-selected)
     py_var = IntVar(value=1)
@@ -234,6 +249,13 @@ def main():
     js_checkbox.pack(anchor='w', padx=10, pady=2)
     php_checkbox.pack(anchor='w', padx=10, pady=2)
     css_checkbox.pack(anchor='w', padx=10, pady=2)
+
+    # Entry for depth selection
+    depth_label = Label(root, text="Enter Depth for Subdirectories (0 for current folder only):")
+    depth_label.pack(pady=5)
+    depth_entry = Entry(root)
+    depth_entry.insert(0, "0")  # Default depth level 0
+    depth_entry.pack(pady=5)
 
     # Button to show bonus options
     bonus_button = Button(root, text="Bonus", command=show_bonus_options)
